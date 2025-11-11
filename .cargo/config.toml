@@ -1,0 +1,23 @@
+[build]
+# Use all CPU cores for parallel builds
+jobs = 8
+
+[target.x86_64-apple-darwin]
+# macOS Intel linker flags
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+# macOS Apple Silicon linker flags
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+[target.x86_64-unknown-linux-gnu]
+# Linux x86_64 linker flags
+rustflags = ["-C", "link-arg=-Wl,--no-undefined"]
+
+[target.aarch64-unknown-linux-gnu]
+# Linux ARM64 linker flags
+rustflags = ["-C", "link-arg=-Wl,--no-undefined"]
+
+[target.x86_64-pc-windows-msvc]
+# Windows linker flags (if needed in future)
+rustflags = []

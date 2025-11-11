@@ -1,0 +1,25 @@
+{
+  "rust-analyzer.cargo.features": ["neovim-0-10"],
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "rust-analyzer.checkOnSave.extraArgs": ["--all-targets", "--", "-D", "warnings"],
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.rustfmt.extraArgs": ["+nightly"],
+  "rust-analyzer.linkedProjects": [
+    "./Cargo.toml"
+  ],
+  "files.watcherExclude": {
+    "**/target/**": true
+  },
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[lua]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "JohnnyMorganz.stylua"
+  },
+  "[toml]": {
+    "editor.formatOnSave": true
+  }
+}

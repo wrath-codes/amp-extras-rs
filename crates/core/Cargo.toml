@@ -1,0 +1,48 @@
+[package]
+name = "amp_extras_core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Neovim integration
+nvim-oxi.workspace = true
+
+# Database
+rusqlite.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Lazy statics
+once_cell.workspace = true
+
+# UUIDs for sync-ready IDs
+uuid.workspace = true
+
+# Date/Time
+chrono.workspace = true
+
+# File system
+notify.workspace = true
+dirs.workspace = true
+
+# Threading
+crossbeam.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.5"
+tempfile = "3.12"
+mockall = "0.13"

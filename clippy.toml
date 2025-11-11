@@ -1,0 +1,19 @@
+# Clippy configuration
+
+# Warn on missing documentation for public items
+missing-docs-in-crate-items = true
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 30
+
+# Type complexity threshold
+type-complexity-threshold = 250
+
+# Allow single character variable names in specific contexts
+single-char-binding-names-threshold = 4
+
+# Don't warn on TODO/FIXME comments
+allow-dbg-in-tests = true
+
+# Array size threshold for stack allocation warnings
+array-size-threshold = 512000
