@@ -1,0 +1,201 @@
+//! LSP diagnostics operation
+
+use serde::Deserialize;
+use serde_json::{json, Value};
+
+use crate::errors::{AmpError, Result};
+
+/// Parameters for getDiagnostics
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct GetDiagnosticsParams {
+    path: Option<String>,
+}
+
+/// Diagnostic entry from Neovim's vim.diagnostic.get()
+///
+/// Fields are 0-based as returned by Neovim
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct NvimDiagnostic {
+    lnum: u32,
+    col: u32,
+    end_lnum: Option<u32>,
+    end_col: Option<u32>,
+    severity: Option<u8>,
+    message: String,
+}
+
+/// Handle getDiagnostics request
+///
+/// Returns diagnostics for a file or directory path.
+/// Integrates with Neovim's diagnostic system.
+///
+/// Request:
+/// ```json
+/// { "path": "/path/to/file.txt" }  // Optional - file or directory prefix
+/// ```
+///
+/// Response:
+/// ```json
+/// {
+///   "entries": [
+///     {
+///       "uri": "file:///path/to/file.rs",
+///       "diagnostics": [...]
+///     }
+///   ]
+/// }
+/// ```
+///
+/// # Errors
+/// - InvalidArgs: Invalid parameters
+pub fn get_diagnostics(params: Value) -> Result<Value> {
+    let _params: GetDiagnosticsParams = serde_json::from_value(params)
+        .map_err(|e| AmpError::InvalidArgs {
+            command: "getDiagnostics".to_string(),
+            reason: e.to_string(),
+        })?;
+
+    // Only get diagnostics if Neovim is initialized
+    #[cfg(not(test))]
+    if super::nvim_available() {
+        return get_diagnostics_impl(_params.path.as_deref());
+    }
+
+    // Fallback: return empty diagnostics
+    Ok(json!({
+        "entries": []
+    }))
+}
+
+/// Implementation of getDiagnostics (only compiled when not in test mode)
+#[cfg(not(test))]
+fn get_diagnostics_impl(path_filter: Option<&str>) -> Result<Value> {
+    use nvim_oxi::api;
+    use nvim_oxi::conversion::FromObject;
+    use std::collections::HashMap;
+
+    // Collect diagnostics grouped by file URI
+    let mut entries_map: HashMap<String, Vec<Value>> = HashMap::new();
+
+    // Iterate through all buffers
+    for buf in api::list_bufs() {
+        // Get buffer path
+        let Ok(buf_path) = buf.get_name() else {
+            continue;
+        };
+
+        // Only consider absolute paths
+        if !buf_path.is_absolute() {
+            continue;
+        }
+
+        let path_str = buf_path.to_string_lossy().to_string();
+
+        // Apply path filter (prefix matching for directories)
+        if let Some(filter) = path_filter {
+            if !path_str.starts_with(filter) {
+                continue;
+            }
+        }
+
+        // Get diagnostics for this buffer using luaeval
+        let lua_expr = "vim.json.encode(vim.diagnostic.get(vim.fn.bufnr(args)))";
+        let result: std::result::Result<nvim_oxi::Object, _> = api::call_function(
+            "luaeval",
+            (lua_expr, path_str.clone()),
+        );
+
+        let Ok(diag_json_obj) = result else {
+            continue;
+        };
+
+        // Convert Object to String using FromObject
+        let diag_json_str = match <String as FromObject>::from_object(diag_json_obj) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+
+        // Parse JSON into Vec<NvimDiagnostic>
+        let diags: Vec<NvimDiagnostic> = match serde_json::from_str(&diag_json_str) {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+
+        // Skip if no diagnostics for this buffer
+        if diags.is_empty() {
+            continue;
+        }
+
+        // Convert to amp.nvim format
+        let uri = format!("file://{}", path_str);
+        let diagnostics: Vec<Value> = diags
+            .into_iter()
+            .map(|diag| {
+                let line_content = super::get_line_content(&buf_path, diag.lnum);
+                let start_line = diag.lnum;
+                let start_char = diag.col;
+                let end_line = diag.end_lnum.unwrap_or(diag.lnum);
+                let end_char = diag.end_col.unwrap_or(diag.col);
+
+                // Calculate character offsets (simple approach)
+                let start_offset = start_char;
+                let end_offset = end_char;
+
+                json!({
+                    "range": {
+                        "startLine": start_line,
+                        "startCharacter": start_char,
+                        "endLine": end_line,
+                        "endCharacter": end_char
+                    },
+                    "severity": super::map_severity(diag.severity),
+                    "description": diag.message,
+                    "lineContent": line_content,
+                    "startOffset": start_offset,
+                    "endOffset": end_offset
+                })
+            })
+            .collect();
+
+        entries_map.insert(uri, diagnostics);
+    }
+
+    // Convert to entries array
+    let entries: Vec<Value> = entries_map
+        .into_iter()
+        .map(|(uri, diagnostics)| {
+            json!({
+                "uri": uri,
+                "diagnostics": diagnostics
+            })
+        })
+        .collect();
+
+    Ok(json!({
+        "entries": entries
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_get_diagnostics_empty() {
+        let result = get_diagnostics(json!({"path": "/tmp/test.txt"})).unwrap();
+
+        assert!(result["entries"].is_array());
+        assert_eq!(result["entries"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_get_diagnostics_no_params() {
+        // Should still return empty for now
+        let result = get_diagnostics(json!({})).unwrap();
+
+        assert!(result["entries"].is_array());
+    }
+}

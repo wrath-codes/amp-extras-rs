@@ -10,7 +10,7 @@ local M = {}
 
 -- Determine the directory where this module resides
 local source = debug.getinfo(1, "S").source
-local module_dir = source:match("@(.*/)")  -- Extract directory from "@/path/to/init.lua"
+local module_dir = source:match("@(.*/)") -- Extract directory from "@/path/to/init.lua"
 
 -- Add module directory to package.cpath so it can find amp_extras_core.so
 if module_dir then
@@ -30,12 +30,12 @@ local ffi = require("amp_extras_core")
 function M.call(command, args)
   args = args or {}
   local result = ffi.call(command, args)
-  
+
   -- Check if result is an error
   if result.error then
     return nil, result.message
   end
-  
+
   return result
 end
 
@@ -48,11 +48,11 @@ end
 ---@return string|nil error Error message if failed
 function M.server_start()
   local result = ffi.server_start()
-  
+
   if result.error then
     return nil, result.message
   end
-  
+
   return result
 end
 
@@ -128,11 +128,11 @@ end
 ---@return string|nil error Error message if failed
 function M.send_user_message(message)
   local result = ffi.send_user_message(message)
-  
+
   if result.error then
     return nil, result.message
   end
-  
+
   return result
 end
 
@@ -147,11 +147,11 @@ end
 ---@return string|nil error Error message if failed
 function M.send_to_prompt(message)
   local result = ffi.send_to_prompt(message)
-  
+
   if result.error then
     return nil, result.message
   end
-  
+
   return result
 end
 

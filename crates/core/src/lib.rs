@@ -19,11 +19,13 @@
 // Module declarations
 pub mod autocmds;
 pub mod commands;
+pub mod conversion;
 pub mod errors;
 pub mod ffi;
 pub mod ide_ops;
 pub mod lockfile;
 pub mod notifications;
+pub mod nvim;
 pub mod rpc;
 pub mod server;
 pub mod util;

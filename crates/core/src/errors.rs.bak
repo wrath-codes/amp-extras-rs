@@ -63,10 +63,6 @@ pub enum AmpError {
     #[error("Notification error: {0}")]
     NotificationError(String),
 
-    /// Conversion error (nvim-oxi Object ↔ Rust types)
-    #[error("Conversion error: {0}")]
-    ConversionError(String),
-
     /// Generic error (catch-all)
     #[error("{0}")]
     Other(String),
@@ -139,7 +135,6 @@ impl AmpError {
             AmpError::UrlParseError(_) => "url_parse",
             AmpError::HubError(_) => "hub",
             AmpError::NotificationError(_) => "notification",
-            AmpError::ConversionError(_) => "conversion",
             AmpError::Other(_) => "other",
         }
     }

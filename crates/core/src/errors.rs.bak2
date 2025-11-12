@@ -139,7 +139,6 @@ impl AmpError {
             AmpError::UrlParseError(_) => "url_parse",
             AmpError::HubError(_) => "hub",
             AmpError::NotificationError(_) => "notification",
-            AmpError::ConversionError(_) => "conversion",
             AmpError::Other(_) => "other",
         }
     }
