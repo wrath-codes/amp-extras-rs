@@ -59,9 +59,15 @@ test:
 test-verbose:
     cargo test --workspace -- --nocapture
 
-# Run integration tests with Neovim headless
-test-integration: build-debug
-    @echo "Running integration tests (Neovim headless)..."
+# Run nvim-oxi integration tests
+test-integration:
+    @echo "Running nvim-oxi integration tests..."
+    cargo test --package amp-extras-tests
+    @echo "✓ Integration tests complete!"
+
+# Run legacy Lua integration tests with Neovim headless
+test-integration-lua: build-debug
+    @echo "Running legacy Lua integration tests (Neovim headless)..."
     @if command -v nvim >/dev/null 2>&1; then \
         nvim --headless -u tests/server_test.lua || true; \
         echo "✓ Integration tests complete!"; \

@@ -70,12 +70,15 @@ function M.server_is_running()
   return result.running == true
 end
 
---- Setup notification autocommands (Lua-based with debouncing)
+--- Setup notification autocommands
+---
+--- Registers autocmds in Rust for:
+--- - selectionDidChange (CursorMoved/CursorMovedI with 10ms debouncing)
+--- - visibleFilesDidChange (BufEnter/WinEnter with 10ms debouncing)
+---
 ---@return table|nil result Success status or nil on error
 ---@return string|nil error Error message if failed
 function M.setup_notifications()
-  -- Call Rust FFI to setup autocmds with debouncing
-  -- Uses nvim-oxi TimerHandle for 10ms debouncing on libuv event loop
   return ffi.setup_notifications()
 end
 
@@ -91,28 +94,8 @@ function M.autocomplete(kind, prefix)
   return ffi.autocomplete(kind, prefix)
 end
 
--- ============================================================================
--- Notification Interface (for internal use by selection/visible_files modules)
--- ============================================================================
-
---- Send selection changed notification
----@param uri string File URI
----@param start_line number Start line (0-indexed)
----@param start_char number Start character (0-indexed)
----@param end_line number End line (0-indexed)
----@param end_char number End character (0-indexed)
----@param content string Selected text content
----@return table result
-function M.send_selection_changed(uri, start_line, start_char, end_line, end_char, content)
-  return ffi.send_selection_changed(uri, start_line, start_char, end_line, end_char, content)
-end
-
---- Send visible files changed notification
----@param uris string[] List of file URIs
----@return table result
-function M.send_visible_files_changed(uris)
-  return ffi.send_visible_files_changed(uris)
-end
+-- Note: send_selection_changed and send_visible_files_changed are handled
+-- automatically by Rust autocmds. No need to call manually.
 
 -- ============================================================================
 -- User Message Interface

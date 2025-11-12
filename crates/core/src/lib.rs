@@ -30,7 +30,9 @@ pub mod rpc;
 pub mod server;
 pub mod util;
 
-use nvim_oxi::{Dictionary, Function, Object};
+use nvim_oxi::{api, Dictionary, Function, Object};
+use nvim_oxi::api::opts::CreateCommandOpts;
+use nvim_oxi::api::types::{CommandArgs, CommandRange};
 
 // Wrapper functions for complex signatures to help type inference
 fn send_selection_changed_wrapper(
@@ -51,6 +53,139 @@ fn send_to_prompt_wrapper(message: String) -> Object {
     ffi::send_to_prompt(message).unwrap()
 }
 
+/// Register Neovim user commands
+fn register_commands() -> nvim_oxi::Result<()> {
+    use serde_json::json;
+
+    // Send file reference
+    let opts = CreateCommandOpts::builder()
+        .desc("Send file reference to Amp prompt (@file.rs)")
+        .build();
+    api::create_user_command("AmpSendFileRef",
+        |_| -> nvim_oxi::Result<()> {
+            match commands::dispatch("send_file_ref", json!({})) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let _ = api::err_writeln(&format!("AmpSendFileRef error: {}", e));
+                    Ok(())
+                }
+            }
+        },
+        &opts)?;
+
+    // Send line reference
+    let opts = CreateCommandOpts::builder()
+        .desc("Send current line reference to Amp prompt (@file.rs#L10)")
+        .build();
+    api::create_user_command("AmpSendLineRef",
+        |_| -> nvim_oxi::Result<()> {
+            match commands::dispatch("send_line_ref", json!({})) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let _ = api::err_writeln(&format!("AmpSendLineRef error: {}", e));
+                    Ok(())
+                }
+            }
+        },
+        &opts)?;
+
+    // Send entire buffer
+    let opts = CreateCommandOpts::builder()
+        .desc("Send entire buffer content to Amp prompt")
+        .build();
+    api::create_user_command("AmpSendBuffer",
+        |_| -> nvim_oxi::Result<()> {
+            match commands::dispatch("send_buffer", json!({})) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let _ = api::err_writeln(&format!("AmpSendBuffer error: {}", e));
+                    Ok(())
+                }
+            }
+        },
+        &opts)?;
+
+    // Send selection (range command)
+    let opts = CreateCommandOpts::builder()
+        .desc("Send selected text to Amp prompt")
+        .range(CommandRange::CurrentLine)
+        .build();
+    api::create_user_command("AmpSendSelection",
+        |args: CommandArgs| -> nvim_oxi::Result<()> {
+            let start_line = args.line1;
+            let end_line = args.line2;
+            
+            match commands::dispatch("send_selection", json!({
+                "start_line": start_line,
+                "end_line": end_line
+            })) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let _ = api::err_writeln(&format!("AmpSendSelection error: {}", e));
+                    Ok(())
+                }
+            }
+        },
+        &opts)?;
+
+    // Send selection reference (range command)
+    let opts = CreateCommandOpts::builder()
+        .desc("Send file reference with line range to Amp prompt (@file.rs#L10-L20)")
+        .range(CommandRange::CurrentLine)
+        .build();
+    api::create_user_command("AmpSendSelectionRef",
+        |args: CommandArgs| -> nvim_oxi::Result<()> {
+            let start_line = args.line1;
+            let end_line = args.line2;
+            
+            match commands::dispatch("send_selection_ref", json!({
+                "start_line": start_line,
+                "end_line": end_line
+            })) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    let _ = api::err_writeln(&format!("AmpSendSelectionRef error: {}", e));
+                    Ok(())
+                }
+            }
+        },
+        &opts)?;
+
+    // Server commands
+    let opts = CreateCommandOpts::builder()
+        .desc("Start the Amp WebSocket server")
+        .build();
+    api::create_user_command("AmpServerStart",
+        |_| -> nvim_oxi::Result<()> {
+            let _ = ffi::server_start();
+            // Notification already sent by ffi layer
+            Ok(())
+        },
+        &opts)?;
+
+    let opts = CreateCommandOpts::builder()
+        .desc("Stop the Amp WebSocket server")
+        .build();
+    api::create_user_command("AmpServerStop",
+        |_| -> nvim_oxi::Result<()> {
+            let _ = ffi::server_stop();
+            Ok(())
+        },
+        &opts)?;
+
+    let opts = CreateCommandOpts::builder()
+        .desc("Check Amp WebSocket server status")
+        .build();
+    api::create_user_command("AmpServerStatus",
+        |_| -> nvim_oxi::Result<()> {
+            let _ = ffi::server_is_running();
+            Ok(())
+        },
+        &opts)?;
+
+    Ok(())
+}
+
 /// Plugin entry point - called when Neovim loads the plugin
 ///
 /// This function is invoked by nvim-oxi and registers all FFI exports
@@ -59,6 +194,9 @@ fn send_to_prompt_wrapper(message: String) -> Object {
 /// The function name determines the exported symbol: amp_extras_core -> luaopen_amp_extras_core
 #[nvim_oxi::plugin]
 fn amp_extras_core() -> nvim_oxi::Result<Dictionary> {
+    // Register user commands
+    register_commands()?;
+    
     // Create FFI exports dictionary with explicit type parameters
     let mut exports = Dictionary::new();
     

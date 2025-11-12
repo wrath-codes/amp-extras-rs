@@ -100,13 +100,12 @@ pub fn init_async_handle() -> Result<()> {
 
     // Create AsyncHandle with callback that processes messages from channel
     let handle = AsyncHandle::new(move || {
+        use nvim_oxi::{api::{self, types::LogLevel}, Dictionary};
+        
         // Process all pending messages
         while let Ok(msg) = rx.try_recv() {
-            let lua_code = format!(
-                "vim.notify([[{}]], vim.log.levels.INFO)",
-                msg.message.replace("\\", "\\\\").replace("[[", "").replace("]]", "")
-            );
-            let _ = nvim_oxi::api::exec(&lua_code, false);
+            // Use type-safe api::notify instead of string-based exec
+            let _ = api::notify(&msg.message, LogLevel::Info, &Dictionary::new());
         }
         Ok::<_, std::convert::Infallible>(())
     })
@@ -235,11 +234,11 @@ pub(super) fn normalize_path(path: &str) -> Result<PathBuf> {
 #[cfg(not(test))]
 pub(super) fn map_severity(severity: Option<u8>) -> &'static str {
     match severity.unwrap_or(3) {
-        1 => "error",
-        2 => "warning",
-        3 => "info",
-        4 => "hint",
-        _ => "info", // Default to info for unknown values
+        1 => "ERROR",
+        2 => "WARNING",
+        3 => "INFO",
+        4 => "HINT",
+        _ => "INFO", // Default to info for unknown values
     }
 }
 

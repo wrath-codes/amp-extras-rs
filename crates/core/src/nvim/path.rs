@@ -10,38 +10,79 @@ use crate::errors::{AmpError, Result};
 
 /// Convert a file path to a file:// URI
 ///
+/// Uses Neovim's `vim.uri_from_fname()` for LSP-compliant URIs with proper
+/// percent-encoding of special characters (spaces, Unicode, etc.).
+///
 /// # Arguments
 /// * `path` - File path to convert
 ///
 /// # Returns
-/// A file:// URI string (e.g., "file:///home/user/file.txt")
+/// A file:// URI string with percent-encoded characters
 ///
 /// # Example
 /// ```rust,ignore
-/// let uri = path::to_uri(Path::new("/tmp/test.txt"));
-/// assert_eq!(uri, "file:///tmp/test.txt");
+/// let uri = path::to_uri(Path::new("/tmp/test file.txt"))?;
+/// // Returns: "file:///tmp/test%20file.txt"
 /// ```
-pub(crate) fn to_uri(path: &Path) -> String {
-    format!("file://{}", path.display())
+pub fn to_uri(path: &Path) -> Result<String> {
+    let path_str = path.to_string_lossy();
+
+    // Use vim.uri_from_fname for proper percent-encoding
+    #[cfg(not(test))]
+    {
+        use nvim_oxi::conversion::FromObject;
+        
+        let obj = api::call_function("luaeval", ("vim.uri_from_fname(_A)", path_str.as_ref()))
+            .map_err(|e| AmpError::Other(format!("Failed to call vim.uri_from_fname: {}", e)))?;
+        
+        let uri: String = <String as FromObject>::from_object(obj)
+            .map_err(|e| AmpError::ConversionError(format!("Failed to convert URI: {}", e)))?;
+        
+        return Ok(uri);
+    }
+
+    // Test fallback - simple format
+    #[cfg(test)]
+    Ok(format!("file://{}", path.display()))
 }
 
 /// Convert a file:// URI to a file path
+///
+/// Uses Neovim's `vim.uri_to_fname()` for proper URI decoding, handling
+/// percent-encoded characters and platform-specific paths.
 ///
 /// # Arguments
 /// * `uri` - file:// URI string
 ///
 /// # Returns
-/// - `Some(path)` - Successfully parsed path
-/// - `None` - Invalid URI format
+/// - `Ok(path)` - Successfully parsed path
+/// - `Err(_)` - Invalid URI format
 ///
 /// # Example
 /// ```rust,ignore
-/// let path = path::from_uri("file:///tmp/test.txt");
-/// assert_eq!(path, Some(PathBuf::from("/tmp/test.txt")));
+/// let path = path::from_uri("file:///tmp/test%20file.txt")?;
+/// assert_eq!(path, PathBuf::from("/tmp/test file.txt"));
 /// ```
-pub(crate) fn from_uri(uri: &str) -> Option<std::path::PathBuf> {
+pub fn from_uri(uri: &str) -> Result<std::path::PathBuf> {
+    // Use vim.uri_to_fname for proper URI decoding
+    #[cfg(not(test))]
+    {
+        use nvim_oxi::conversion::FromObject;
+        
+        let obj = api::call_function("luaeval", ("vim.uri_to_fname(_A)", uri))
+            .map_err(|e| AmpError::Other(format!("Failed to call vim.uri_to_fname: {}", e)))?;
+        
+        let path: String = <String as FromObject>::from_object(obj)
+            .map_err(|e| AmpError::ConversionError(format!("Failed to convert path: {}", e)))?;
+        
+        return Ok(std::path::PathBuf::from(path));
+    }
+
+    // Test fallback - simple strip prefix
+    #[cfg(test)]
     uri.strip_prefix("file://")
         .map(std::path::PathBuf::from)
+        .ok_or_else(|| AmpError::Other("Invalid URI format".into()))
 }
 
 /// Convert an absolute path to a workspace-relative path
@@ -57,14 +98,16 @@ pub(crate) fn from_uri(uri: &str) -> Option<std::path::PathBuf> {
 /// Workspace-relative path as a String
 ///
 /// # Errors
-/// Returns error if Neovim API call fails
+/// Returns error if path is invalid or Neovim API call fails
 ///
 /// # Example
 /// ```rust,ignore
 /// let relative = path::to_relative(Path::new("/home/user/project/src/main.rs"))?;
 /// // Returns: "src/main.rs" (if cwd is /home/user/project)
 /// ```
-pub(crate) fn to_relative(path: &Path) -> Result<String> {
+pub fn to_relative(path: &Path) -> Result<String> {
+    use nvim_oxi::conversion::FromObject;
+
     // Convert path to string
     let path_str = path
         .to_str()
@@ -76,20 +119,18 @@ pub(crate) fn to_relative(path: &Path) -> Result<String> {
     }
 
     // Use fnamemodify(path, ':.') to get relative path
-    let result: std::result::Result<nvim_oxi::Object, _> =
-        api::call_function("fnamemodify", (path_str, ":."));
+    let obj = api::call_function("fnamemodify", (path_str, ":."))
+        .map_err(|e| AmpError::Other(format!("Failed to call fnamemodify: {}", e)))?;
 
-    if let Ok(obj) = result {
-        use nvim_oxi::conversion::FromObject;
-        if let Ok(relative) = <String as FromObject>::from_object(obj) {
-            // Filter out "v:null" or other invalid values
-            if !relative.is_empty() && !relative.starts_with("v:") {
-                return Ok(relative);
-            }
-        }
+    let relative: String = <String as FromObject>::from_object(obj)
+        .map_err(|e| AmpError::ConversionError(format!("Failed to convert relative path: {}", e)))?;
+
+    // Filter out "v:null" or other invalid values
+    if !relative.is_empty() && !relative.starts_with("v:") {
+        return Ok(relative);
     }
 
-    // Fallback: return path as-is (if it's absolute)
+    // Fallback: return path as-is if it's absolute
     if path.is_absolute() {
         Ok(path_str.to_string())
     } else {
@@ -106,36 +147,43 @@ mod tests {
     fn test_to_uri() {
         let path = Path::new("/tmp/test.txt");
         let uri = to_uri(path);
-        assert_eq!(uri, "file:///tmp/test.txt");
+        assert!(uri.is_ok());
+        assert_eq!(uri.unwrap(), "file:///tmp/test.txt");
     }
 
     #[test]
     fn test_to_uri_with_spaces() {
         let path = Path::new("/tmp/my file.txt");
         let uri = to_uri(path);
-        assert_eq!(uri, "file:///tmp/my file.txt");
+        assert!(uri.is_ok());
+        // In test mode, simple format (no percent-encoding)
+        // In production, vim.uri_from_fname would encode as %20
+        assert_eq!(uri.unwrap(), "file:///tmp/my file.txt");
     }
 
     #[test]
     fn test_from_uri() {
         let uri = "file:///tmp/test.txt";
         let path = from_uri(uri);
-        assert_eq!(path, Some(PathBuf::from("/tmp/test.txt")));
+        assert!(path.is_ok());
+        assert_eq!(path.unwrap(), PathBuf::from("/tmp/test.txt"));
     }
 
     #[test]
     fn test_from_uri_invalid() {
         let uri = "http://example.com/file.txt";
-        let path = from_uri(uri);
-        assert_eq!(path, None);
+        let result = from_uri(uri);
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_roundtrip() {
         let original = Path::new("/home/user/project/src/main.rs");
         let uri = to_uri(original);
-        let back = from_uri(&uri);
-        assert_eq!(back, Some(original.to_path_buf()));
+        assert!(uri.is_ok());
+        let back = from_uri(&uri.unwrap());
+        assert!(back.is_ok());
+        assert_eq!(back.unwrap(), original.to_path_buf());
     }
 
     #[test]

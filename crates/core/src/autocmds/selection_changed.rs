@@ -83,7 +83,7 @@ pub(crate) fn handle_event(hub: &Hub) -> Result<()> {
 
     // Convert to file:// URI
     let uri = if buf_path.is_absolute() {
-        path::to_uri(&buf_path)
+        path::to_uri(&buf_path)?
     } else {
         // Handle unnamed/scratch buffers - skip notification
         return Ok(());

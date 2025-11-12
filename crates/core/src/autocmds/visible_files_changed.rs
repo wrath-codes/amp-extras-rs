@@ -83,7 +83,7 @@ pub(crate) fn handle_event(hub: &Hub) -> Result<()> {
     let uris: Vec<String> = paths
         .iter()
         .map(|p| path::to_uri(p))
-        .collect();
+        .collect::<Result<Vec<String>>>()?;
 
     notifications::send_visible_files_changed(hub, uris)?;
 

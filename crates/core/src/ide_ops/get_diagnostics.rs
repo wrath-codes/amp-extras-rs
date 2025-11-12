@@ -79,8 +79,17 @@ fn get_diagnostics_impl(path_filter: Option<&str>) -> Result<Value> {
     // Collect diagnostics grouped by file URI
     let mut entries_map: HashMap<String, Vec<Value>> = HashMap::new();
 
+    // Normalize the filter path (handles /tmp -> /private/tmp on macOS)
+    let filter_raw = path_filter.map(|s| s.to_string());
+    let filter_canon = filter_raw.as_deref().and_then(|p| std::fs::canonicalize(p).ok());
+
     // Iterate through all buffers
     for buf in api::list_bufs() {
+        // Skip unloaded buffers
+        if !buf.is_loaded() {
+            continue;
+        }
+
         // Get buffer path
         let Ok(buf_path) = buf.get_name() else {
             continue;
@@ -94,31 +103,51 @@ fn get_diagnostics_impl(path_filter: Option<&str>) -> Result<Value> {
         let path_str = buf_path.to_string_lossy().to_string();
 
         // Apply path filter (prefix matching for directories)
-        if let Some(filter) = path_filter {
-            if !path_str.starts_with(filter) {
+        // Check both raw and canonical paths to handle symlinks (e.g., /tmp -> /private/tmp)
+        if filter_raw.is_some() || filter_canon.is_some() {
+            let mut matches = false;
+            
+            // Try raw path match first (fastest)
+            if let Some(ref filter) = filter_raw {
+                if path_str.starts_with(filter) {
+                    matches = true;
+                }
+            }
+            
+            // Try canonical path match if raw didn't match
+            if !matches {
+                if let Some(ref filter_canon_path) = filter_canon {
+                    // Canonicalize buffer path for comparison
+                    if let Ok(canon_buf) = std::fs::canonicalize(&buf_path) {
+                        let canon_buf_str = canon_buf.to_string_lossy();
+                        let canon_filter_str = filter_canon_path.to_string_lossy();
+                        if canon_buf_str.starts_with(canon_filter_str.as_ref()) {
+                            matches = true;
+                        }
+                    }
+                }
+            }
+            
+            if !matches {
                 continue;
             }
         }
 
-        // Get diagnostics for this buffer using luaeval
-        let lua_expr = "vim.json.encode(vim.diagnostic.get(vim.fn.bufnr(args)))";
+        // Get diagnostics as Object (no JSON round-trip)
+        // Use buffer handle directly instead of path lookup
+        let bufnr = buf.handle();
+        let lua_expr = "vim.diagnostic.get(_A)";
         let result: std::result::Result<nvim_oxi::Object, _> = api::call_function(
             "luaeval",
-            (lua_expr, path_str.clone()),
+            (lua_expr, bufnr),
         );
 
-        let Ok(diag_json_obj) = result else {
+        let Ok(diag_obj) = result else {
             continue;
         };
 
-        // Convert Object to String using FromObject
-        let diag_json_str = match <String as FromObject>::from_object(diag_json_obj) {
-            Ok(s) => s,
-            Err(_) => continue,
-        };
-
-        // Parse JSON into Vec<NvimDiagnostic>
-        let diags: Vec<NvimDiagnostic> = match serde_json::from_str(&diag_json_str) {
+        // Deserialize directly from Object using conversion utility
+        let diags: Vec<NvimDiagnostic> = match crate::conversion::from_object(diag_obj) {
             Ok(d) => d,
             Err(_) => continue,
         };
@@ -128,8 +157,23 @@ fn get_diagnostics_impl(path_filter: Option<&str>) -> Result<Value> {
             continue;
         }
 
-        // Convert to amp.nvim format
-        let uri = format!("file://{}", path_str);
+        // Get LSP-compliant URI with percent-encoding
+        let uri_obj = match api::call_function(
+            "luaeval",
+            ("vim.uri_from_fname(_A)", path_str.as_str()),
+        ) {
+            Ok(obj) => obj,
+            Err(_) => {
+                // Fallback to simple format if vim.uri_from_fname fails
+                nvim_oxi::Object::from(format!("file://{}", path_str))
+            }
+        };
+
+        let uri: String = match <String as FromObject>::from_object(uri_obj) {
+            Ok(u) => u,
+            Err(_) => format!("file://{}", path_str), // Fallback
+        };
+
         let diagnostics: Vec<Value> = diags
             .into_iter()
             .map(|diag| {
