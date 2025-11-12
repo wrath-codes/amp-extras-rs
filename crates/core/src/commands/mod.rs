@@ -16,6 +16,12 @@ use std::collections::HashMap;
 
 use crate::errors::{AmpError, Result};
 
+mod send_selection;
+mod send_selection_ref;
+mod send_buffer;
+mod send_file_ref;
+mod send_line_ref;
+
 /// Type alias for command handler functions
 ///
 /// All command handlers take a JSON Value (arguments) and return a Result<Value>
@@ -29,6 +35,13 @@ static REGISTRY: Lazy<HashMap<&'static str, CommandHandler>> = Lazy::new(|| {
 
     // Test command
     map.insert("ping", ping as CommandHandler);
+
+    // Amp interaction commands
+    map.insert("send_selection", send_selection::send_selection as CommandHandler);
+    map.insert("send_selection_ref", send_selection_ref::send_selection_ref as CommandHandler);
+    map.insert("send_buffer", send_buffer::send_buffer as CommandHandler);
+    map.insert("send_file_ref", send_file_ref::send_file_ref as CommandHandler);
+    map.insert("send_line_ref", send_line_ref::send_line_ref as CommandHandler);
 
     map
 });
