@@ -44,30 +44,15 @@ pub fn handle_connection(stream: TcpStream, expected_token: String, hub: Hub) {
             // Register client with hub
             hub.register(client_id, tx);
 
-            // Notify user and fire autocommand (direct API - no scheduling)
+            // Notify user and fire autocommand (via main thread)
             #[cfg(not(test))]
             {
-                use nvim_oxi::api;
-
-                // Notify user that Amp CLI connected (ignore errors)
-                let _ = api::notify(
-                    "Amp CLI: Connected ",
-                    api::types::LogLevel::Info,
-                    &Default::default(),
-                );
-
-                // Fire User autocommand (ignore errors)
-                let _ = api::exec_autocmds(
-                    vec!["User"],
-                    &api::opts::ExecAutocmdsOpts::builder()
-                        .patterns(vec!["AmpClientConnected"])
-                        .build(),
-                );
+                super::events::notify_client_connected();
             }
 
-            // Send initial state to newly connected client (skip if Neovim unavailable)
+            // Send initial state to newly connected client (skip if Neovim unavailable or server shutting down)
             #[cfg(not(test))]
-            if crate::ide_ops::nvim_available() {
+            if crate::ide_ops::nvim_available() && super::is_running() {
                 send_initial_state(hub.clone());
             }
 
@@ -78,25 +63,9 @@ pub fn handle_connection(stream: TcpStream, expected_token: String, hub: Hub) {
             hub.unregister(client_id);
 
             // Fire disconnect notification if this was the last client
-            // Try direct API call without scheduling (might be more stable)
             #[cfg(not(test))]
             if hub.client_count() == 0 {
-                use nvim_oxi::api;
-
-                // Try to notify directly - ignore all errors
-                let _ = api::notify(
-                    "Amp CLI: Disconnected ",
-                    api::types::LogLevel::Info,
-                    &Default::default(),
-                );
-
-                // Fire User autocommand - ignore all errors
-                let _ = api::exec_autocmds(
-                    vec!["User"],
-                    &api::opts::ExecAutocmdsOpts::builder()
-                        .patterns(vec!["AmpClientDisconnected"])
-                        .build(),
-                );
+                super::events::notify_client_disconnected();
             }
         },
         Err(_e) => {
@@ -131,6 +100,12 @@ fn run_message_loop(
     let mut last_pong = Instant::now();
 
     loop {
+        // Check if server is shutting down - exit promptly
+        if !super::is_running() {
+            let _ = websocket.close(None);
+            return Ok("server shutdown".to_string());
+        }
+
         let now = Instant::now();
 
         // Check if we need to send a ping
@@ -307,11 +282,16 @@ fn accept_with_auth(
 #[cfg(not(test))]
 fn send_initial_state(hub: Hub) {
     std::thread::spawn(move || {
+        // Exit early if server is shutting down
+        if !super::is_running() {
+            return;
+        }
+
         // Wait 200ms before sending plugin metadata
         std::thread::sleep(Duration::from_millis(200));
 
-        // Check if still connected (hub has clients)
-        if hub.client_count() == 0 {
+        // Check if still connected (hub has clients) and server is running
+        if hub.client_count() == 0 || !super::is_running() {
             return;
         }
 
@@ -323,8 +303,8 @@ fn send_initial_state(hub: Hub) {
         // Wait additional 50ms before sending state
         std::thread::sleep(Duration::from_millis(50));
 
-        // Check again if still connected and Neovim is available
-        if hub.client_count() == 0 || !crate::ide_ops::nvim_available() {
+        // Check again if still connected, Neovim is available, and server is running
+        if hub.client_count() == 0 || !crate::ide_ops::nvim_available() || !super::is_running() {
             return;
         }
 

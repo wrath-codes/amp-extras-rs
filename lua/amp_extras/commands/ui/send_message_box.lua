@@ -10,17 +10,17 @@ function Prompt:init(props, popup_options)
     fn.merge({
       on_submit = fn.ignore,
       prefix = "",
-      submit_key = "<C-j>",  -- Dummy key (custom mappings handle Enter/Shift+Enter)
+      submit_key = "<C-j>", -- Dummy key (custom mappings handle Enter/Shift+Enter)
       autoresize = true,
-      max_lines = 10,  -- Allow up to 10 lines
+      max_lines = 10, -- Allow up to 10 lines
     }, props),
     fn.deep_merge({
       buf_options = {
         buftype = "prompt",
       },
       win_options = {
-        wrap = true,  -- Enable text wrapping at window width
-        linebreak = true,  -- Break at word boundaries, not mid-word
+        wrap = true, -- Enable text wrapping at window width
+        linebreak = true, -- Break at word boundaries, not mid-word
       },
     }, popup_options)
   )
@@ -43,7 +43,7 @@ function Prompt:on_mount()
 
   self._private.prefix = is_nui_text(props.prefix) and props.prefix
     or Text(props.prefix, self:hl_group("Prefix"))
-  
+
   -- Set empty prompt to avoid repeating prefix on new lines
   vim.fn.prompt_setprompt(self.bufnr, "")
 
@@ -72,14 +72,14 @@ function Prompt:mappings()
   return {
     {
       mode = "i",
-      key = "<CR>",  -- Enter to submit
+      key = "<CR>", -- Enter to submit
       handler = function()
         props.on_submit(self:get_current_value())
       end,
     },
     {
       mode = "i",
-      key = "<S-CR>",  -- Shift+Enter to insert newline
+      key = "<S-CR>", -- Shift+Enter to insert newline
       handler = function()
         -- Insert newline and stay in insert mode
         vim.api.nvim_feedkeys("\n", "n", true)
@@ -99,7 +99,7 @@ M.command = function()
 
   local renderer = n.create_renderer({
     width = 60,
-    height = 3,  -- Start small, will grow dynamically
+    height = 3, -- Start small, will grow dynamically
   })
 
   -- Debounce timer to prevent excessive renderer resizes
@@ -109,7 +109,7 @@ M.command = function()
   local body = function()
     return Prompt({
       autofocus = true,
-      autoresize = true,  -- Let TextInput manage component size internally
+      autoresize = true, -- Let TextInput manage component size internally
       prefix = " 󱐋 ",
       placeholder = "Type your message to Amp...",
       border_label = {
@@ -123,11 +123,11 @@ M.command = function()
         -- Every ~50 chars = 1 line, plus explicit newlines
         local char_count = #value
         local newline_count = select(2, value:gsub("\n", "\n"))
-        
+
         -- Estimate: 1 line per 50 chars, plus 1 for each newline
         local estimated_lines = math.ceil(char_count / 50) + newline_count
-        local new_height = math.min(estimated_lines + 4, 14)  -- +4 for overhead
-        
+        local new_height = math.min(estimated_lines + 4, 14) -- +4 for overhead
+
         -- Immediately resize without debounce to be more responsive
         if new_height ~= last_height then
           last_height = new_height

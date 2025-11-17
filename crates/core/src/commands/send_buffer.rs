@@ -50,6 +50,7 @@ pub fn send_buffer(_params: Value) -> Result<Value> {
 
     // Convert nvim_oxi::String iterator to Vec<String>
     // Use to_str() to preserve original UTF-8 without replacement characters
+    // lines
     let content = lines
         .map(|s| {
             s.to_str()
