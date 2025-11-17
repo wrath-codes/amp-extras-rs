@@ -45,3 +45,4 @@ docs
 #environment
 .env
 TURSO_STRATEGY.md
+amp-tc.sh
