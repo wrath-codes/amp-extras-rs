@@ -4,14 +4,35 @@ local M = {}
 -- Load UI commands
 M.ui = {
   send_message_box = require("amp_extras.commands.ui").send_message,
+  login = require("amp_extras.commands.ui").login,
 }
 
 -- Load send commands
 local send = require("amp_extras.commands.send")
+local logout = require("amp_extras.commands.logout")
+local update = require("amp_extras.commands.update")
 
 --- Register all commands as Neovim user commands
 function M.register_commands()
   -- UI Commands
+  vim.api.nvim_create_user_command("AmpLogin", function()
+    M.ui.login.command()
+  end, {
+    desc = "Amp: Log in to Amp",
+  })
+
+  vim.api.nvim_create_user_command("AmpLogout", function()
+    logout.command()
+  end, {
+    desc = "Amp: Log out from Amp",
+  })
+
+  vim.api.nvim_create_user_command("AmpUpdate", function()
+    update.command()
+  end, {
+    desc = "Amp: Update Amp CLI",
+  })
+
   vim.api.nvim_create_user_command("AmpSendMessage", function()
     M.ui.send_message_box.command()
   end, {

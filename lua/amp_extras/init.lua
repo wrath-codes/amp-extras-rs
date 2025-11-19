@@ -25,6 +25,12 @@ local defaults = {
     send_file_ref = true, -- default: prefix .. "sf"
     send_line_ref = true, -- default: prefix .. "sr"
     send_message = true, -- default: prefix .. "sm"
+    login = true, -- default: prefix .. "li"
+    logout = true, -- default: prefix .. "lo"
+    update = true, -- default: prefix .. "u"
+  },
+  lualine = {
+    enabled = false, -- Enable lualine integration
   },
 }
 
@@ -36,7 +42,13 @@ local default_suffixes = {
   send_file_ref = "sf",
   send_line_ref = "sr",
   send_message = "sm",
+  login = "li",
+  logout = "lo",
+  update = "u",
 }
+
+-- Optional lualine integration
+M.lualine = require("amp_extras.lualine")
 
 -- Active configuration (merged defaults + user config)
 M.config = vim.deepcopy(defaults)
@@ -92,22 +104,27 @@ local function setup_keymaps(config)
   end
 
   -- Send selection (visual mode)
-  map("send_selection", "v", ":'<,'>AmpSendSelection<cr>", "Amp: Send Selection (Content)")
+  map("send_selection", "v", ":'<,'>AmpSendSelection<cr>", "Send Selection (Content)")
 
   -- Send selection reference (visual mode)
-  map("send_selection_ref", "v", ":'<,'>AmpSendSelectionRef<cr>", "Amp: Send Selection (Ref)")
+  map("send_selection_ref", "v", ":'<,'>AmpSendSelectionRef<cr>", "Send Selection (Ref)")
 
   -- Send buffer (normal mode)
-  map("send_buffer", "n", "<cmd>AmpSendBuffer<cr>", "Amp: Send Buffer (Content)")
+  map("send_buffer", "n", "<cmd>AmpSendBuffer<cr>", "Send Buffer (Content)")
 
   -- Send file reference (normal mode)
-  map("send_file_ref", "n", "<cmd>AmpSendFileRef<cr>", "Amp: Send File (Ref)")
+  map("send_file_ref", "n", "<cmd>AmpSendFileRef<cr>", "Send File (Ref)")
 
   -- Send line reference (normal mode)
-  map("send_line_ref", "n", "<cmd>AmpSendLineRef<cr>", "Amp: Send Line (Ref)")
+  map("send_line_ref", "n", "<cmd>AmpSendLineRef<cr>", "Send Line (Ref)")
 
   -- Send message UI
-  map("send_message", "n", "<cmd>AmpSendMessage<cr>", "Amp: Send Message UI")
+  map("send_message", "n", "<cmd>AmpSendMessage<cr>", "Send Message UI")
+
+  -- Account commands
+  map("login", "n", "<cmd>AmpLogin<cr>", "Amp Login")
+  map("logout", "n", "<cmd>AmpLogout<cr>", "Amp Logout")
+  map("update", "n", "<cmd>AmpUpdate<cr>", "Amp Update")
 end
 
 --- Setup amp-extras plugin
@@ -138,6 +155,11 @@ function M.setup(opts)
 
   -- Register UI commands
   M.register_ui_commands()
+
+  -- Setup Lualine integration if enabled
+  if M.config.lualine and M.config.lualine.enabled then
+    M.lualine.setup(M.config.lualine)
+  end
 
   return M.config
 end
