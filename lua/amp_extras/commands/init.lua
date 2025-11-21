@@ -73,6 +73,25 @@ function M.register_commands()
   })
 
   require("amp_extras.commands.dashx").setup()
+
+  -- Session commands
+  vim.api.nvim_create_user_command("AmpSession", function()
+    require("amp_extras.commands.session").start()
+  end, {
+    desc = "Amp: Start interactive session",
+  })
+
+  vim.api.nvim_create_user_command("AmpSessionWithMessage", function()
+    require("amp_extras.commands.session").start_with_message()
+  end, {
+    desc = "Amp: Start interactive session with initial message",
+  })
+
+  vim.api.nvim_create_user_command("AmpExecute", function()
+    require("amp_extras.commands.session").execute()
+  end, {
+    desc = "Amp: Execute prompt in floating session",
+  })
 end
 
 return M

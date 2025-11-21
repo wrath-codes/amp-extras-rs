@@ -1,6 +1,7 @@
 local n = require("nui-components")
 local api = require("amp_extras.commands.dashx.api")
 local form = require("amp_extras.commands.ui.dashx.form")
+local session = require("amp_extras.commands.session")
 
 local M = {}
 
@@ -371,6 +372,9 @@ function M.show(opts)
       table.insert(actions, { key = "<C-d>", desc = "Delete (" .. selected_count .. ")" })
     else
       table.insert(actions, { key = "<C-e>", desc = "Edit" })
+      table.insert(actions, { key = "<C-x>", desc = "Execute" })
+      table.insert(actions, { key = "<C-c>", desc = "Copy" })
+      table.insert(actions, { key = "<C-S-s>", desc = "Session" })
       table.insert(actions, { key = "<C-d>", desc = "Delete" })
     end
 
@@ -624,6 +628,66 @@ function M.show(opts)
       },
       {
         mode = { "n", "i" },
+        key = "<C-x>",
+        handler = function()
+          local selected_count = 0
+          for _ in pairs(_state.selected_ids) do
+            selected_count = selected_count + 1
+          end
+          if selected_count > 0 then
+            return
+          end
+
+          local node = _state.nodes[_state.selected_index]
+          if node and node._prompt then
+            renderer:close()
+            pcall(api.use_prompt, node._prompt.id)
+            session._run_execute(node._prompt.content)
+          end
+        end,
+      },
+      {
+        mode = { "n", "i" },
+        key = "<C-c>",
+        handler = function()
+          local selected_count = 0
+          for _ in pairs(_state.selected_ids) do
+            selected_count = selected_count + 1
+          end
+          if selected_count > 0 then
+            return
+          end
+
+          local node = _state.nodes[_state.selected_index]
+          if node and node._prompt then
+            vim.fn.setreg("+", node._prompt.content)
+            vim.notify("Copied prompt to clipboard", vim.log.levels.INFO)
+            renderer:close()
+          end
+        end,
+      },
+      {
+        mode = { "n", "i" },
+        key = "<C-S-s>",
+        handler = function()
+          local selected_count = 0
+          for _ in pairs(_state.selected_ids) do
+            selected_count = selected_count + 1
+          end
+          if selected_count > 0 then
+            return
+          end
+
+          local node = _state.nodes[_state.selected_index]
+          if node and node._prompt then
+            renderer:close()
+            pcall(api.use_prompt, node._prompt.id)
+            session._run_start_with_message(node._prompt.content)
+          end
+        end,
+      },
+      {
+        mode = { "n", "i" },
         key = "<C-n>",
         handler = function()
           renderer:close()
@@ -649,22 +713,16 @@ function M.show(opts)
           end
 
           -- Always try to get the selected node from the list component
-          local list = renderer:get_component_by_id("prompt_list")
-          if list then
-            local tree = list.tree or (list.get_tree and list:get_tree())
-            if tree then
-              local node = tree:get_node()
-              if node and node._prompt then
-                renderer:close()
-                form.show({
-                  mode = "edit",
-                  prompt = node._prompt,
-                  on_success = function()
-                    M.show()
-                  end,
-                })
-              end
-            end
+          local node = _state.nodes[_state.selected_index]
+          if node and node._prompt then
+            renderer:close()
+            form.show({
+              mode = "edit",
+              prompt = node._prompt,
+              on_success = function()
+                M.show()
+              end,
+            })
           end
         end,
       },
@@ -731,19 +789,13 @@ function M.show(opts)
             return
           end
 
-          local list = renderer:get_component_by_id("prompt_list")
-          if list then
-            local tree = list.tree or (list.get_tree and list:get_tree())
-            if tree then
-              local node = tree:get_node()
-              if node and node._prompt then
-                local choice =
-                  vim.fn.confirm("Delete prompt '" .. node._prompt.title .. "'?", "&Yes\n&No", 2)
-                if choice == 1 then
-                  pcall(api.delete_prompt, node._prompt.id)
-                  fetch_data()
-                end
-              end
+          local node = _state.nodes[_state.selected_index]
+          if node and node._prompt then
+            local choice =
+              vim.fn.confirm("Delete prompt '" .. node._prompt.title .. "'?", "&Yes\n&No", 2)
+            if choice == 1 then
+              pcall(api.delete_prompt, node._prompt.id)
+              fetch_data()
             end
           end
         end,
