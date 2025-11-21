@@ -13,6 +13,7 @@ local _state = {
   all_prompts = {},
   search_query = "",
   nodes = {},
+  selected_index = 1,
 }
 
 function M.show(opts)
@@ -24,6 +25,7 @@ function M.show(opts)
     _state.all_prompts = {}
     _state.search_query = ""
     _state.nodes = {}
+    _state.selected_index = 1
   end
 
   -- Close existing renderer if any (e.g. during resize)
@@ -77,6 +79,8 @@ function M.show(opts)
     nodes = _state.nodes,
   })
 
+  local update_preview -- Forward declaration
+
   -- Logic: Filter the cached prompts based on query
   local function filter_list()
     local query = _state.search_query:lower()
@@ -112,6 +116,7 @@ function M.show(opts)
     -- Update signal
     signal.nodes = nodes
     _state.nodes = nodes
+    _state.selected_index = 1
 
     -- Manual force update
     vim.schedule(function()
@@ -125,6 +130,16 @@ function M.show(opts)
         if tree then
           tree:set_nodes(nodes)
           tree:render()
+          
+          -- Reset visual cursor to top
+          if list.winid and vim.api.nvim_win_is_valid(list.winid) then
+             pcall(vim.api.nvim_win_set_cursor, list.winid, { 1, 0 })
+          end
+          
+          -- Update preview for the new first item
+          if nodes[1] then
+             update_preview(nodes[1])
+          end
         end
       end
     end)
@@ -188,7 +203,7 @@ function M.show(opts)
   }
 
   -- Logic: Update preview based on selected node
-  local function update_preview(node)
+  update_preview = function(node)
     local prompt = node._prompt
     if prompt then
       vim.schedule(function()
@@ -282,38 +297,87 @@ function M.show(opts)
     end
   end
 
+  -- Shared logic to submit a prompt
+  local function submit_prompt(prompt)
+    if not prompt then return end
+    
+    -- Usage tracking
+    pcall(api.use_prompt, prompt.id)
+
+    -- Send to Amp (Assuming amp global or module)
+    local ok, amp_msg = pcall(require, "amp.message")
+    if ok then
+      amp_msg.send_message(prompt.content)
+    else
+      vim.notify("Sent prompt to Amp: " .. prompt.title)
+    end
+
+    if current_renderer then
+      pcall(function() current_renderer:close() end)
+      current_renderer = nil
+    end
+  end
+
+  local function submit_selection()
+     local node = _state.nodes[_state.selected_index]
+     if node and node._prompt then
+       submit_prompt(node._prompt)
+     end
+  end
+
   -- Shared mappings for CRUD operations
   local function get_crud_mappings(component_id)
     local function move_selection(direction)
+      local count = #_state.nodes
+      if count == 0 then return end
+
+      local new_index = _state.selected_index + direction
+      if new_index < 1 then new_index = 1 end
+      if new_index > count then new_index = count end
+      
+      _state.selected_index = new_index
+
+      -- Update visual selection
       local list = renderer:get_component_by_id("prompt_list")
       if list then
         local winid = list.winid
         if winid and vim.api.nvim_win_is_valid(winid) then
-          local curr = vim.api.nvim_win_get_cursor(winid)
-          local lnum = curr[1]
-          local buf = vim.api.nvim_win_get_buf(winid)
-          local count = vim.api.nvim_buf_line_count(buf)
-          local new_lnum = lnum + direction
-
-          if new_lnum >= 1 and new_lnum <= count then
-            vim.api.nvim_win_set_cursor(winid, { new_lnum, 0 })
-
-            local tree = list.tree or (list.get_tree and list:get_tree())
-            if tree then
-              -- Force re-render to update text styling (prepare_node relies on cursor position)
-              tree:render()
-
-              local node = tree:get_node(new_lnum)
-              if node then
-                update_preview(node)
-              end
-            end
+          pcall(vim.api.nvim_win_set_cursor, winid, { new_index, 0 })
+          
+          -- Force re-render for highlight update (optional if nui handles it, but safer)
+          local tree = list.tree or (list.get_tree and list:get_tree())
+          if tree then
+             tree:render()
           end
         end
+      end
+      
+      -- Update preview
+      if _state.nodes[new_index] then
+        update_preview(_state.nodes[new_index])
       end
     end
 
     return {
+      {
+        mode = { "n", "i" },
+        key = "<CR>",
+        handler = submit_selection,
+      },
+      {
+        mode = { "n" },
+        key = "j",
+        handler = function()
+          move_selection(1)
+        end,
+      },
+      {
+        mode = { "n" },
+        key = "k",
+        handler = function()
+          move_selection(-1)
+        end,
+      },
       {
         mode = { "n", "i" },
         key = "<C-j>",
@@ -407,6 +471,12 @@ function M.show(opts)
         _state.search_query = value
         filter_list()
       end,
+      on_mount = function(component)
+        -- Force map <CR> in Insert mode to submit, overriding nui defaults
+        if component.bufnr then
+          vim.keymap.set("i", "<CR>", submit_selection, { buffer = component.bufnr, nowait = true })
+        end
+      end,
       mappings = get_crud_mappings,
     })
 
@@ -415,6 +485,7 @@ function M.show(opts)
       data = signal.nodes,
       multiselect = false,
       flex = 1,
+      is_focusable = false,
       border_label = {
         text = "Prompts",
         icon = "",
@@ -479,18 +550,7 @@ function M.show(opts)
       on_select = function(node, component)
         local prompt = node._prompt
         if prompt then
-          -- Usage tracking
-          pcall(api.use_prompt, prompt.id)
-
-          -- Send to Amp (Assuming amp global or module)
-          local ok, amp_msg = pcall(require, "amp.message")
-          if ok then
-            amp_msg.send_message(prompt.content)
-          else
-            vim.notify("Sent prompt to Amp: " .. prompt.title)
-          end
-
-          renderer:close()
+          submit_prompt(prompt)
         end
       end,
       on_change = function(node)

@@ -25,6 +25,13 @@ function M.show(props)
     height = 30,
   })
 
+  local window_style = {
+    highlight = {
+      FloatBorder = "DiagnosticError",
+      FloatTitle = "DiagnosticError",
+    },
+  }
+
   local form_component = n.form({
     id = "prompt_form",
     submit_key = "<C-s>", -- Ctrl+s to save
@@ -78,36 +85,39 @@ function M.show(props)
       end
     end
   }, n.rows(
-    n.gap(1),
     n.text_input({
       id = "title_input",
-      label = "Title",
+      border_label = "Title",
       placeholder = "e.g., Refactor Code",
       value = prompt.title,
       validate = n.validator.min_length(3),
       autofocus = true,
+      window = window_style,
     }),
+    n.gap(1),
     n.text_input({
       id = "tags_input",
-      label = "Tags (comma separated)",
+      border_label = "Tags (comma separated)",
       placeholder = "rust, logic, testing",
       value = tags_str,
+      window = window_style,
     }),
     n.gap(1),
     n.text_input({
       id = "content_input",
-      label = "Prompt Content",
+      border_label = "Prompt Content",
       placeholder = "Enter your prompt here...",
       value = prompt.content,
-      max_lines = 20,
-      autoresize = true,
-      validate = n.validator.min_length(1),
+      flex = 1,
+      window = window_style,
     }),
     n.gap(1),
     n.paragraph({
       lines = "Press <C-s> to save, <Esc> to cancel",
       align = "center",
-      is_focusable = false
+      is_focusable = false,
+      border_label = "Actions",
+      window = window_style,
     })
   ))
 
