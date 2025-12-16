@@ -90,12 +90,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
-          scoop install luajit
-          $luajitPath = scoop prefix luajit
-          ls -R $luajitPath
-          echo "LUA_LIB=$luajitPath" >> $env:GITHUB_ENV
-          echo "LUA_INC=$luajitPath" >> $env:GITHUB_ENV
+          # Install vcpkg and luajit
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install luajit:x64-windows
+          # Set environment for mlua-sys
+          echo "LUA_LIB=C:\vcpkg\installed\x64-windows\lib" >> $env:GITHUB_ENV
+          echo "LUA_INC=C:\vcpkg\installed\x64-windows\include\luajit" >> $env:GITHUB_ENV
           echo "LUA_LIB_NAME=lua51" >> $env:GITHUB_ENV
           echo "LUAJIT_NO_PKG_CONFIG=1" >> $env:GITHUB_ENV
 
