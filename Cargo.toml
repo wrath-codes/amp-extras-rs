@@ -11,7 +11,7 @@ repository = "https://github.com/wrath-codes/amp-extras-rs"
 
 [workspace.dependencies]
 # Neovim integration
-nvim-oxi = { version = "0.6", features = ["neovim-0-10", "libuv", "mlua"] }
+nvim-oxi = { version = "0.6", features = ["neovim-0-10", "mlua"] }
 
 # Database
 dotenvy = "0.15"
