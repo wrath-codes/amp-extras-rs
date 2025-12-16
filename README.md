@@ -8,10 +8,10 @@ A complete Rust rewrite of [amp-extras.nvim](https://github.com/wrath-codes/amp-
 
 ## Features (Planned)
 
-- **Thread Management** - List, search, archive, and manage Amp threads
+- **Thread Management** - List, search, archive, and manage Amp threads (soon)
 - **Prompt Library** - Store and organize reusable prompts with SQLite
-- **Permission Editor** - Visual editor for Amp tool permissions
-- **MCP Integration** - Manage MCP servers and tools
+- **Permission Editor** - Visual editor for Amp tool permissions (soon)
+- **MCP Integration** - Manage MCP servers and tools (soon)
 - **Rich UI** - Built entirely with nui-components (no external dependencies)
 - **Lightning Fast** - <1ms SQLite queries, local-first architecture
 - **Offline Capable** - Works without network connection
