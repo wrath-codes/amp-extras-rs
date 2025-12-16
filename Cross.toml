@@ -3,12 +3,11 @@ passthrough = [
     "RUST_BACKTRACE",
 ]
 
-# Use zig for consistent glibc versions (supports older distros)
 [target.x86_64-unknown-linux-gnu]
-pre-build = ["apt-get update && apt-get install -y libsqlite3-dev"]
+pre-build = ["apt-get update && apt-get install -y libsqlite3-dev libluajit-5.1-dev pkg-config"]
 
 [target.aarch64-unknown-linux-gnu]
-pre-build = ["apt-get update && apt-get install -y libsqlite3-dev"]
+pre-build = ["apt-get update && apt-get install -y libsqlite3-dev libluajit-5.1-dev pkg-config"]
 
 [target.x86_64-unknown-linux-musl]
-pre-build = ["apk add sqlite-dev"]
+pre-build = ["apk add sqlite-dev luajit-dev pkgconf"]

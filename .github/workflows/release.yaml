@@ -74,6 +74,10 @@ jobs:
           cross build --release --target ${{ matrix.target }} --package amp_extras_core
           cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} ${{ matrix.asset_name }}
 
+      - name: Install LuaJIT (macOS)
+        if: runner.os == 'macOS'
+        run: brew install luajit
+
       - name: Build (macOS)
         if: runner.os == 'macOS'
         env:
@@ -81,6 +85,12 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.target }} --package amp_extras_core
           cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} ${{ matrix.asset_name }}
+
+      - name: Install LuaJIT (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install luajit -y
+          echo "LUA_LIB=$env:ChocolateyInstall\lib\luajit\tools" >> $env:GITHUB_ENV
 
       - name: Build (Windows)
         if: runner.os == 'Windows'

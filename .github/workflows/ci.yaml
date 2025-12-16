@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install LuaJIT
+        run: sudo apt-get update && sudo apt-get install -y libluajit-5.1-dev
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo check --workspace --all-targets
 
@@ -27,12 +29,14 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt --all -- --check
-
+      
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install LuaJIT
+        run: sudo apt-get update && sudo apt-get install -y libluajit-5.1-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -47,6 +51,17 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+      - name: Install LuaJIT (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libluajit-5.1-dev
+      - name: Install LuaJIT (macOS)
+        if: runner.os == 'macOS'
+        run: brew install luajit
+      - name: Install LuaJIT (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install luajit -y
+          echo "LUA_LIB=$env:ChocolateyInstall\lib\luajit\tools" >> $env:GITHUB_ENV
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --package amp_extras_core --lib
 
@@ -59,6 +74,17 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+      - name: Install LuaJIT (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libluajit-5.1-dev
+      - name: Install LuaJIT (macOS)
+        if: runner.os == 'macOS'
+        run: brew install luajit
+      - name: Install LuaJIT (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install luajit -y
+          echo "LUA_LIB=$env:ChocolateyInstall\lib\luajit\tools" >> $env:GITHUB_ENV
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --release --package amp_extras_core
 
