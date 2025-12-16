@@ -1,17 +1,32 @@
 -- FFI interface to Rust core library
 local M = {}
 
--- Determine the directory where this module resides
-local source = debug.getinfo(1, "S").source
-local module_dir = source:match("@(.*/)") -- Extract directory from "@/path/to/ffi.lua"
+local binary = require("amp_extras.binary")
 
--- Add module directory to package.cpath so it can find amp_extras_core.so
-if module_dir then
-  package.cpath = module_dir .. "?.so;" .. package.cpath
+-- The loaded FFI module (lazy-loaded)
+local ffi = nil
+local load_error = nil
+
+--- Ensure the FFI module is loaded
+---@return table|nil module, string|nil error
+local function ensure_loaded()
+  if ffi then
+    return ffi
+  end
+
+  if load_error then
+    return nil, load_error
+  end
+
+  local mod, err = binary.load()
+  if mod then
+    ffi = mod
+    return ffi
+  else
+    load_error = err
+    return nil, err
+  end
 end
-
--- Load the compiled Rust FFI module
-local ffi = require("amp_extras_core")
 
 -- ============================================================================
 -- Command Interface
@@ -22,8 +37,13 @@ local ffi = require("amp_extras_core")
 ---@param args table Command arguments
 ---@return table Result or error object
 function M.call(command, args)
+  local mod, err = ensure_loaded()
+  if not mod then
+    return { error = true, message = "FFI not loaded: " .. (err or "unknown") }
+  end
+
   args = args or {}
-  local result = ffi.call(command, args)
+  local result = mod.call(command, args)
 
   -- Check if result is an error
   if result.error then
@@ -42,7 +62,13 @@ end
 ---@param prefix string User-typed prefix
 ---@return string[] Completion items
 function M.autocomplete(kind, prefix)
-  return ffi.autocomplete(kind, prefix)
+  local mod, err = ensure_loaded()
+  if not mod then
+    vim.notify("amp-extras: FFI not loaded: " .. (err or "unknown"), vim.log.levels.WARN)
+    return {}
+  end
+
+  return mod.autocomplete(kind, prefix)
 end
 
 -- ============================================================================
@@ -54,7 +80,26 @@ end
 ---@param config table Configuration options
 ---@return table result Success status or error object
 function M.setup(config)
-  return ffi.setup(config or {})
+  local mod, err = ensure_loaded()
+  if not mod then
+    return { error = true, message = "FFI not loaded: " .. (err or "unknown") }
+  end
+
+  return mod.setup(config or {})
+end
+
+--- Check if the FFI is available
+---@return boolean
+function M.is_available()
+  local mod = ensure_loaded()
+  return mod ~= nil
+end
+
+--- Get the load error if any
+---@return string|nil
+function M.get_error()
+  ensure_loaded()
+  return load_error
 end
 
 return M

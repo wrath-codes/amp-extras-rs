@@ -203,6 +203,64 @@ watch:
         exit 1; \
     fi
 
+# ============================================================================
+# Cross-Platform Build Commands
+# ============================================================================
+
+# Build for all supported targets (requires cross)
+build-all:
+    @echo "Building for all targets..."
+    @just build-linux-x64
+    @just build-linux-arm64
+    @just build-macos-x64
+    @just build-macos-arm64
+    @echo "✓ All builds complete!"
+
+# Build for Linux x86_64
+build-linux-x64:
+    @echo "Building for x86_64-unknown-linux-gnu..."
+    cross build --release --target x86_64-unknown-linux-gnu --package amp_extras_core
+    @mkdir -p dist
+    cp target/x86_64-unknown-linux-gnu/release/libamp_extras_core.so dist/x86_64-unknown-linux-gnu.so
+
+# Build for Linux ARM64
+build-linux-arm64:
+    @echo "Building for aarch64-unknown-linux-gnu..."
+    cross build --release --target aarch64-unknown-linux-gnu --package amp_extras_core
+    @mkdir -p dist
+    cp target/aarch64-unknown-linux-gnu/release/libamp_extras_core.so dist/aarch64-unknown-linux-gnu.so
+
+# Build for macOS Intel
+build-macos-x64:
+    @echo "Building for x86_64-apple-darwin..."
+    MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target x86_64-apple-darwin --package amp_extras_core
+    @mkdir -p dist
+    cp target/x86_64-apple-darwin/release/libamp_extras_core.dylib dist/x86_64-apple-darwin.dylib
+
+# Build for macOS Apple Silicon
+build-macos-arm64:
+    @echo "Building for aarch64-apple-darwin..."
+    MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --release --target aarch64-apple-darwin --package amp_extras_core
+    @mkdir -p dist
+    cp target/aarch64-apple-darwin/release/libamp_extras_core.dylib dist/aarch64-apple-darwin.dylib
+
+# Install cross-compilation tools
+install-cross:
+    @echo "Installing cross..."
+    cargo install cross --git https://github.com/cross-rs/cross
+    @echo "Adding Rust targets..."
+    rustup target add x86_64-unknown-linux-gnu
+    rustup target add aarch64-unknown-linux-gnu
+    rustup target add x86_64-unknown-linux-musl
+    rustup target add x86_64-apple-darwin
+    rustup target add aarch64-apple-darwin
+    rustup target add x86_64-pc-windows-msvc
+    @echo "✓ Cross-compilation tools installed!"
+
+# ============================================================================
+# Project Statistics
+# ============================================================================
+
 # Show project statistics
 stats:
     @echo "Project Statistics:"

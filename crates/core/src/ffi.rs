@@ -137,9 +137,8 @@ fn dispatch_command(command: &str, args: Value) -> Result<Value> {
     commands::dispatch(command, args)
 }
 
-/// Internal autocomplete implementation
+/// Internal autocomplete implementation (stub - completion handled in Lua via blink.cmp)
 fn autocomplete_impl(_kind: &str, _prefix: &str) -> Result<Vec<String>> {
-    // Placeholder - will be implemented with actual data sources
     Ok(vec![])
 }
 

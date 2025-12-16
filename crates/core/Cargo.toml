@@ -36,6 +36,7 @@ chrono.workspace = true
 
 # File system
 notify.workspace = true
+ignore.workspace = true
 dirs.workspace = true
 
 # Threading
@@ -44,7 +45,6 @@ walkdir.workspace = true
 
 # Async runtime
 tokio.workspace = true
-
 
 [dev-dependencies]
 criterion = "0.7"

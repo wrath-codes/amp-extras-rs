@@ -36,6 +36,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # File system
 notify = "8.2"
+ignore = "0.4"
 dirs = "6.0"
 
 # Threading
@@ -53,7 +54,6 @@ tokio = { version = "1.48", features = [
   "signal",
   "process",
 ] }
-
 
 [profile.release]
 opt-level = 3
