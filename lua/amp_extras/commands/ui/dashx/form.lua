@@ -43,12 +43,16 @@ function M.show(props)
       end
 
       local component = renderer:get_component_by_id("prompt_form")
-      if not component then return end
-      
+      if not component then
+        return
+      end
+
       local tags_comp = renderer:get_component_by_id("tags_input")
-      if not tags_comp then return end
+      if not tags_comp then
+        return
+      end
       local tags_val = tags_comp:get_current_value()
-      
+
       -- Process tags
       local tags = {}
       for tag in string.gmatch(tags_val, "([^,]+)") do
@@ -58,7 +62,9 @@ function M.show(props)
           table.insert(tags, clean_tag)
         end
       end
-      if #tags == 0 then tags = nil end
+      if #tags == 0 then
+        tags = nil
+      end
 
       if is_bulk_tags then
         renderer:close()
@@ -97,7 +103,7 @@ function M.show(props)
       else
         vim.notify("Error: " .. tostring(result), vim.log.levels.ERROR)
       end
-    end
+    end,
   }, is_bulk_tags and n.rows(
     n.text_input({
       id = "tags_input",
@@ -109,9 +115,11 @@ function M.show(props)
       on_mount = function(component)
         -- Map <CR> to submit in normal/insert mode to prevent newlines and auto-save
         if component.bufnr then
-          vim.keymap.set({"n", "i"}, "<CR>", function()
+          vim.keymap.set({ "n", "i" }, "<CR>", function()
             local form = renderer:get_component_by_id("prompt_form")
-            if form then form:submit() end
+            if form then
+              form:submit()
+            end
           end, { buffer = component.bufnr, nowait = true })
         end
       end,

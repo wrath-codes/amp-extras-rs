@@ -24,9 +24,7 @@ pub mod errors;
 pub mod ffi;
 pub mod runtime;
 
-use nvim_oxi::{
-    Dictionary, Function, Object,
-};
+use nvim_oxi::{Dictionary, Function, Object};
 
 /// Register Neovim user commands
 fn register_commands() -> nvim_oxi::Result<()> {
@@ -63,10 +61,7 @@ fn amp_extras_core() -> nvim_oxi::Result<Dictionary> {
             ffi::autocomplete(kind, prefix)
         }),
     );
-    exports.insert(
-        "setup",
-        Function::<Object, Object>::from_fn(|config| ffi::setup(config)),
-    );
+    exports.insert("setup", Function::<Object, Object>::from_fn(ffi::setup));
 
     Ok(exports)
 }

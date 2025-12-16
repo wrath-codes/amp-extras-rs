@@ -1,9 +1,9 @@
+use super::Db;
+use crate::errors::Result;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use chrono::Utc;
-use crate::errors::Result;
-use super::Db;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Prompt {
@@ -20,20 +20,23 @@ pub struct Prompt {
 
 pub async fn list_prompts() -> Result<Vec<Prompt>> {
     let pool = Db::pool()?;
-    let prompts = sqlx::query_as::<_, Prompt>(
-        "SELECT * FROM prompts ORDER BY updated_at DESC"
-    )
-    .fetch_all(pool)
-    .await?;
-    
+    let prompts = sqlx::query_as::<_, Prompt>("SELECT * FROM prompts ORDER BY updated_at DESC")
+        .fetch_all(pool)
+        .await?;
+
     Ok(prompts)
 }
 
-pub async fn create_prompt(title: String, description: Option<String>, content: String, tags: Option<Vec<String>>) -> Result<Prompt> {
+pub async fn create_prompt(
+    title: String,
+    description: Option<String>,
+    content: String,
+    tags: Option<Vec<String>>,
+) -> Result<Prompt> {
     let pool = Db::pool()?;
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().timestamp();
-    
+
     let tags_json = tags.map(|t| serde_json::to_string(&t).unwrap_or_default());
 
     sqlx::query(
@@ -63,7 +66,13 @@ pub async fn create_prompt(title: String, description: Option<String>, content: 
     })
 }
 
-pub async fn update_prompt(id: String, title: String, description: Option<String>, content: String, tags: Option<Vec<String>>) -> Result<()> {
+pub async fn update_prompt(
+    id: String,
+    title: String,
+    description: Option<String>,
+    content: String,
+    tags: Option<Vec<String>>,
+) -> Result<()> {
     let pool = Db::pool()?;
     let now = Utc::now().timestamp();
     let tags_json = tags.map(|t| serde_json::to_string(&t).unwrap_or_default());
@@ -95,14 +104,12 @@ pub async fn delete_prompt(id: String) -> Result<()> {
 pub async fn record_usage(id: String) -> Result<()> {
     let pool = Db::pool()?;
     let now = Utc::now().timestamp();
-    
-    sqlx::query(
-        "UPDATE prompts SET usage_count = usage_count + 1, last_used_at = ? WHERE id = ?"
-    )
-    .bind(now)
-    .bind(id)
-    .execute(pool)
-    .await?;
+
+    sqlx::query("UPDATE prompts SET usage_count = usage_count + 1, last_used_at = ? WHERE id = ?")
+        .bind(now)
+        .bind(id)
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

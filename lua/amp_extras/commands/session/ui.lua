@@ -57,7 +57,7 @@ function M.float_term(cmd, opts)
       term = true,
       on_exit = function(job_id, exit_code, event)
         if on_exit_cb then
-           pcall(on_exit_cb, exit_code)
+          pcall(on_exit_cb, exit_code)
         end
         vim.schedule(function()
           renderer:close()
@@ -82,8 +82,13 @@ function M.float_term(cmd, opts)
   vim.keymap.set("n", "<Esc>", close, { buffer = buf, nowait = true })
   -- Optional: Map <Esc> in terminal mode if you want direct exit without needing C-\ C-n first,
   -- but this might interfere with TUI apps. For "amp -x", it's likely output only, so it's safe.
-  vim.keymap.set("t", "<Esc>", [[<C-\><C-n>:lua require('amp_extras.commands.session.ui')._close_buf() <CR>]], { buffer = buf, nowait = true })
-  -- We need to store the close function or handle it cleanly. 
+  vim.keymap.set(
+    "t",
+    "<Esc>",
+    [[<C-\><C-n>:lua require('amp_extras.commands.session.ui')._close_buf() <CR>]],
+    { buffer = buf, nowait = true }
+  )
+  -- We need to store the close function or handle it cleanly.
   -- Easier way: just feed keys or call close directly if we can access renderer from global scope, but we can't.
   -- So simpler: Just map <Esc> to exit terminal mode, then q works.
   -- Or use a hack to call close.
@@ -108,12 +113,12 @@ function M.input_box(opts, on_submit)
   opts = opts or {}
   local title = opts.title or " Input "
   local placeholder = opts.placeholder or "Enter value..."
-  
+
   local renderer = n.create_renderer({
     width = 60,
     height = 3,
   })
-  
+
   local window_style = {
     highlight = {
       FloatBorder = "DiagnosticError",
@@ -133,19 +138,19 @@ function M.input_box(opts, on_submit)
     window = window_style,
     on_mount = function(component)
       if component.bufnr then
-        vim.keymap.set({"i", "n"}, "<CR>", function()
+        vim.keymap.set({ "i", "n" }, "<CR>", function()
           local val = component:get_current_value()
           renderer:close()
           if val and vim.trim(val) ~= "" then
             on_submit(val)
           end
         end, { buffer = component.bufnr })
-        
+
         vim.keymap.set("n", "<Esc>", function()
           renderer:close()
         end, { buffer = component.bufnr })
       end
-    end
+    end,
   })
 
   renderer:render(body)

@@ -142,7 +142,7 @@ mod tests {
         assert_eq!(
             AmpError::InvalidArgs {
                 command: "test".to_string(),
-                reason:  "bad".to_string(),
+                reason: "bad".to_string(),
             }
             .category(),
             "arguments"

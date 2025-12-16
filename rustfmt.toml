@@ -1,10 +1,5 @@
-# Rust formatting configuration (nightly features enabled)
+# Rust formatting configuration (stable features only for CI compatibility)
 edition = "2021"
-unstable_features = true
-
-# Imports
-imports_granularity = "Crate"
-group_imports = "StdExternalCrate"
 
 # Layout
 max_width = 100
@@ -12,17 +7,7 @@ hard_tabs = false
 tab_spaces = 4
 
 # Indentation
-indent_style = "Block"
 use_small_heuristics = "Default"
-
-# Comments
-comment_width = 80
-wrap_comments = true
-normalize_comments = true
-
-# Structs and enums
-struct_field_align_threshold = 20
-enum_discrim_align_threshold = 20
 
 # Chains
 chain_width = 60
@@ -40,4 +25,3 @@ match_block_trailing_comma = true
 use_field_init_shorthand = true
 use_try_shorthand = true
 force_explicit_abi = true
-reorder_impl_items = true

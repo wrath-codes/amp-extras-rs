@@ -18,11 +18,11 @@ local defaults = {
 
   -- Feature flags: Toggle groups of functionality
   features = {
-    send = true,    -- Send commands (buffer, selection, line, file)
+    send = true, -- Send commands (buffer, selection, line, file)
     message = true, -- Send message UI
-    login = true,   -- Login/Logout
-    update = true,  -- Update command
-    dashx = true,   -- DashX prompts
+    login = true, -- Login/Logout
+    update = true, -- Update command
+    dashx = true, -- DashX prompts
     session = true, -- Session management
     lualine = true, -- Lualine integration
   },
@@ -204,12 +204,12 @@ end
 function M.setup(opts)
   -- Merge user config with defaults
   opts = opts or {}
-  
+
   -- Handle legacy config structure migration if needed (simple check)
   if opts.keymaps and type(opts.keymaps.send_selection) == "boolean" and not opts.features then
-     -- User is likely using old config style. 
-     -- We can try to map it, or just proceed and let the new defaults handle unset features.
-     -- For now, we assume the user updates their config or we rely on defaults.
+    -- User is likely using old config style.
+    -- We can try to map it, or just proceed and let the new defaults handle unset features.
+    -- For now, we assume the user updates their config or we rely on defaults.
   end
 
   M.config = vim.tbl_deep_extend("force", defaults, opts)

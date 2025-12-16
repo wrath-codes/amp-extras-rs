@@ -56,16 +56,14 @@ static REGISTRY: Lazy<HashMap<&'static str, CommandHandler>> = Lazy::new(|| {
     map.insert("prompts.update", prompts::update as CommandHandler);
     map.insert("prompts.delete", prompts::delete as CommandHandler);
     map.insert("prompts.use", prompts::use_prompt as CommandHandler);
-    
+
     map
-    });
+});
 
 /// Static async command registry
 static ASYNC_REGISTRY: Lazy<HashMap<&'static str, AsyncCommandHandler>> = Lazy::new(|| {
-    let map = HashMap::new();
-
     // No async commands currently
-    map
+    HashMap::new()
 });
 
 /// Dispatch a command by name
@@ -88,7 +86,7 @@ pub fn dispatch(command: &str, args: Value) -> Result<Value> {
     // Try async registry
     if let Some(handler) = ASYNC_REGISTRY.get(command) {
         let future = handler(args);
-        
+
         // Spawn async task on global runtime
         crate::runtime::spawn(async move {
             if let Err(e) = future.await {
@@ -110,7 +108,11 @@ pub fn dispatch(command: &str, args: Value) -> Result<Value> {
 ///
 /// Returns a sorted list of all registered command names.
 pub fn list_commands() -> Vec<String> {
-    let mut commands: Vec<String> = REGISTRY.keys().chain(ASYNC_REGISTRY.keys()).map(|&k| k.to_string()).collect();
+    let mut commands: Vec<String> = REGISTRY
+        .keys()
+        .chain(ASYNC_REGISTRY.keys())
+        .map(|&k| k.to_string())
+        .collect();
     commands.sort();
     commands
 }

@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
+    use crate::db::prompts::{
+        create_prompt, delete_prompt, list_prompts, record_usage, update_prompt,
+    };
     use crate::db::Db;
-    use crate::db::prompts::{create_prompt, list_prompts, update_prompt, record_usage, delete_prompt};
     use crate::errors::Result;
     use tempfile::tempdir;
 
@@ -10,7 +12,7 @@ mod tests {
         // Setup isolated DB
         let dir = tempdir().unwrap();
         let db_path = dir.path().join("test_prompts.db");
-        
+
         // Initialize DB
         Db::init(db_path.to_str().unwrap()).await?;
 
@@ -19,8 +21,9 @@ mod tests {
             "Test Title".into(),
             Some("Test Description".into()),
             "Test Content".into(),
-            Some(vec!["tag1".into(), "tag2".into()])
-        ).await?;
+            Some(vec!["tag1".into(), "tag2".into()]),
+        )
+        .await?;
 
         assert_eq!(prompt.title, "Test Title");
         assert_eq!(prompt.description, Some("Test Description".into()));
@@ -37,8 +40,9 @@ mod tests {
             "Updated Title".into(),
             Some("Updated Description".into()),
             "Updated Content".into(),
-            None
-        ).await?;
+            None,
+        )
+        .await?;
 
         let prompts = list_prompts().await?;
         assert_eq!(prompts[0].title, "Updated Title");
@@ -54,7 +58,7 @@ mod tests {
         delete_prompt(prompt.id.clone()).await?;
         let prompts = list_prompts().await?;
         assert!(prompts.iter().all(|p| p.id != prompt.id));
-        
+
         Ok(())
     }
 }

@@ -160,7 +160,9 @@ end
 ---@return string|nil version
 function M.get_plugin_version()
   local plugin_root = M.get_plugin_root()
-  local handle = io.popen("git -C " .. vim.fn.shellescape(plugin_root) .. " describe --tags --exact-match 2>/dev/null")
+  local handle = io.popen(
+    "git -C " .. vim.fn.shellescape(plugin_root) .. " describe --tags --exact-match 2>/dev/null"
+  )
   if handle then
     local tag = handle:read("*l")
     handle:close()
@@ -323,7 +325,8 @@ function M.ensure(opts)
   -- Try to download
   local version = M.get_plugin_version()
   if not version then
-    local msg = "amp-extras: No git tag found. Please build from source with `just build` or install a tagged release."
+    local msg =
+      "amp-extras: No git tag found. Please build from source with `just build` or install a tagged release."
     vim.notify(msg, vim.log.levels.WARN)
     if opts.on_ready then
       opts.on_ready(false, msg)

@@ -11,19 +11,18 @@ use nvim_oxi::{serde::Deserializer, Dictionary, Object};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::{commands, errors::{AmpError, Result}, db::Db, runtime};
+use crate::{
+    commands,
+    db::Db,
+    errors::{AmpError, Result},
+    runtime,
+};
 
 /// Plugin configuration
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 struct Config {
     // Add configuration fields here if needed in the future
     // Previously had auto_start for server
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {}
-    }
 }
 
 /// Global config storage
@@ -42,8 +41,8 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 /// Result as JSON object, or error message
 pub fn call(command: String, args: Object) -> nvim_oxi::Result<Object> {
     // Convert nvim-oxi Object to serde_json::Value using serde
-    let args_value: Value = Value::deserialize(Deserializer::new(args))
-        .map_err(nvim_oxi::Error::Deserialize)?;
+    let args_value: Value =
+        Value::deserialize(Deserializer::new(args)).map_err(nvim_oxi::Error::Deserialize)?;
 
     // Dispatch command
     match dispatch_command(&command, args_value) {
@@ -51,7 +50,8 @@ pub fn call(command: String, args: Object) -> nvim_oxi::Result<Object> {
             // Convert serde_json::Value back to nvim-oxi Object
             use nvim_oxi::serde::Serializer;
             use serde::Serialize;
-            result.serialize(Serializer::new())
+            result
+                .serialize(Serializer::new())
                 .map_err(nvim_oxi::Error::Serialize)
         },
         Err(err) => Ok(create_error_object(&err)),
@@ -99,8 +99,7 @@ pub fn autocomplete(kind: String, prefix: String) -> nvim_oxi::Result<Vec<String
 /// ```
 pub fn setup(config_obj: Object) -> nvim_oxi::Result<Object> {
     // Deserialize config from Lua
-    let config: Config = Config::deserialize(Deserializer::new(config_obj))
-        .unwrap_or_default();
+    let config: Config = Config::deserialize(Deserializer::new(config_obj)).unwrap_or_default();
 
     // Store config (first call wins)
     let _ = CONFIG.set(config);
@@ -115,11 +114,11 @@ pub fn setup(config_obj: Object) -> nvim_oxi::Result<Object> {
         .unwrap_or_else(|| std::path::PathBuf::from("."));
 
     let db_path = config_dir.join("amp-extras/prompts.db");
-    
+
     let db_path_str = db_path.to_str().unwrap_or("prompts.db");
 
     if let Err(e) = runtime::block_on(Db::init(db_path_str)) {
-         return Ok(create_error_object(&e));
+        return Ok(create_error_object(&e));
     }
 
     let result = Dictionary::from_iter([("success", Object::from(true))]);

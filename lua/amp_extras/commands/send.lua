@@ -4,8 +4,8 @@ local function get_amp_message()
   local ok, amp_message = pcall(require, "amp.message")
   if not ok then
     vim.notify(
-      "amp-extras.nvim: sourcegraph/amp.nvim (module 'amp.message') not found. " ..
-      "Install https://github.com/sourcegraph/amp.nvim and run require('amp').setup(...).",
+      "amp-extras.nvim: sourcegraph/amp.nvim (module 'amp.message') not found. "
+        .. "Install https://github.com/sourcegraph/amp.nvim and run require('amp').setup(...).",
       vim.log.levels.ERROR,
       { title = "Amp Extras" }
     )
@@ -16,7 +16,9 @@ end
 
 function M.send_file_ref()
   local amp_message = get_amp_message()
-  if not amp_message then return end
+  if not amp_message then
+    return
+  end
 
   local bufname = vim.api.nvim_buf_get_name(0)
   if bufname == "" then
@@ -32,7 +34,9 @@ end
 
 function M.send_line_ref()
   local amp_message = get_amp_message()
-  if not amp_message then return end
+  if not amp_message then
+    return
+  end
 
   local bufname = vim.api.nvim_buf_get_name(0)
   if bufname == "" then
@@ -49,7 +53,9 @@ end
 
 function M.send_buffer()
   local amp_message = get_amp_message()
-  if not amp_message then return end
+  if not amp_message then
+    return
+  end
 
   local buf = vim.api.nvim_get_current_buf()
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -60,7 +66,9 @@ end
 
 function M.send_selection(cmd_opts)
   local amp_message = get_amp_message()
-  if not amp_message then return end
+  if not amp_message then
+    return
+  end
 
   -- Use marks for exact visual selection (character-accurate)
   local start_pos = vim.api.nvim_buf_get_mark(0, "<")
@@ -73,19 +81,17 @@ function M.send_selection(cmd_opts)
     return
   end
 
-  local lines = vim.api.nvim_buf_get_text(
-    0,
-    start_pos[1] - 1, start_pos[2],
-    end_pos[1] - 1, end_pos[2] + 1,
-    {}
-  )
+  local lines =
+    vim.api.nvim_buf_get_text(0, start_pos[1] - 1, start_pos[2], end_pos[1] - 1, end_pos[2] + 1, {})
   local text = table.concat(lines, "\n")
   amp_message.send_to_prompt(text)
 end
 
 function M.send_selection_ref(cmd_opts)
   local amp_message = get_amp_message()
-  if not amp_message then return end
+  if not amp_message then
+    return
+  end
 
   local bufname = vim.api.nvim_buf_get_name(0)
   if bufname == "" then

@@ -93,8 +93,11 @@ jobs:
           iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
           scoop install luajit
           $luajitPath = scoop prefix luajit
+          ls -R $luajitPath
           echo "LUA_LIB=$luajitPath" >> $env:GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$luajitPath/lib/pkgconfig" >> $env:GITHUB_ENV
+          echo "LUA_INC=$luajitPath" >> $env:GITHUB_ENV
+          echo "LUA_LIB_NAME=lua51" >> $env:GITHUB_ENV
+          echo "LUAJIT_NO_PKG_CONFIG=1" >> $env:GITHUB_ENV
 
       - name: Build (Windows)
         if: runner.os == 'Windows'

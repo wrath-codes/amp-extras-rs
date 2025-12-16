@@ -11,12 +11,16 @@ rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
 
 [target.x86_64-unknown-linux-gnu]
-# Linux x86_64 linker flags
-rustflags = ["-C", "link-arg=-Wl,--no-undefined"]
+# Linux x86_64 linker flags - allow undefined symbols (resolved by Neovim at runtime)
+rustflags = ["-C", "link-arg=-Wl,--allow-shlib-undefined"]
 
 [target.aarch64-unknown-linux-gnu]
-# Linux ARM64 linker flags
-rustflags = ["-C", "link-arg=-Wl,--no-undefined"]
+# Linux ARM64 linker flags - allow undefined symbols (resolved by Neovim at runtime)
+rustflags = ["-C", "link-arg=-Wl,--allow-shlib-undefined"]
+
+[target.x86_64-unknown-linux-musl]
+# Linux musl linker flags - allow undefined symbols (resolved by Neovim at runtime)
+rustflags = ["-C", "link-arg=-Wl,--allow-shlib-undefined"]
 
 [target.x86_64-pc-windows-msvc]
 # Windows linker flags (if needed in future)
