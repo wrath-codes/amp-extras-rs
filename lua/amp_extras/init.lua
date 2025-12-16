@@ -31,11 +31,6 @@ local defaults = {
   -- Map action name to specific key string (e.g., send_selection = "<leader>x")
   -- or set to false to disable specific keymap even if feature is enabled
   keymaps = {},
-
-  -- Lualine configuration
-  lualine = {
-    enabled = true, -- Kept for backward compatibility/specific config
-  },
 }
 
 -- ============================================================================
@@ -230,8 +225,8 @@ function M.setup(opts)
   M.register_ui_commands()
 
   -- Setup Lualine integration if enabled
-  if M.config.features.lualine and M.config.lualine and M.config.lualine.enabled ~= false then
-    M.lualine.setup(M.config.lualine)
+  if M.config.features.lualine then
+    M.lualine.setup()
   end
 
   return M.config
